@@ -1,7 +1,7 @@
 # Hamon
 
 A lightweight hardware monitor with a dashboard of widgets you arrange yourself.
-Built with Tauri 2 (Rust backend, Svelte frontend).
+Built with Tauri 2 (Rust backend, Svelte frontend). Work In Progress, expect bugs.
 
 ![Hamon screenshot](docs/screenshot.png)
 
