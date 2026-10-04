@@ -1,128 +1,57 @@
 # Hamon
 
-A hardware monitor for the desktop, built as a Tauri 2 app. It samples the
-machine on a background thread and pushes one snapshot per tick to the window;
-the dashboard is a grid of widgets you arrange yourself.
+A lightweight hardware monitor with a dashboard of widgets you arrange yourself.
+Built with Tauri 2 (Rust backend, Svelte frontend).
 
-Widgets are added, removed, reordered and configured from inside the app, so the
-dashboard can be shaped around the machine it is watching — CPU-first during a
-compile, storage-first during a build, quiet and small on a laptop on battery.
+![Hamon screenshot](docs/screenshot.png)
 
-Runs on macOS and Linux. macOS is the development target; see
-[Running it on Linux](#running-it-on-linux) for what to expect there.
+## Features
 
-## What it shows
+- 17 widgets: CPU cores, memory, GPU, network, disks, temperatures, processes, battery, and more
+- Add, remove, reorder and configure widgets from inside the app
+- Small footprint: the macOS DMG is about 5.4 MB
+- Missing data shows as `—`, never as `0`, so "no data" is never mistaken for "idle"
 
-Seventeen widget kinds:
+## Status
 
-| Group | Kinds |
+| Platform | Status |
 | --- | --- |
-| Metrics | Gauge (any metric, with an arc), History (any metric over time) |
-| Hardware | CPU cores, Memory, GPU |
-| Storage & network | Network, Network interfaces, Disk, Filesystems, Disk I/O history |
-| System | Temperatures, Processes, Battery, System, Uptime |
-| Custom | Custom text, Custom ASCII |
+| macOS (Apple Silicon) | Working, main development target |
+| Linux | Compiles cleanly, not yet tested on real hardware |
+| Windows | Not supported |
 
-The `Gauge` and `History` widgets work with any metric the sampler reports: CPU
-usage and frequency, CPU temperature, memory and swap usage, GPU usage,
-temperature, power, memory and fan, network up/down, disk read/write and
-usage, battery level and power.
+## Quick start
 
-A few deliberate choices worth knowing about:
-
-- **An absent metric is never shown as zero.** A sensor the platform did not
-  report renders as an em dash, or an explicit empty state, so "no data" is
-  always distinguishable from "no activity".
-- **Charts do not rescale to the current maximum.** An idle CPU graph scaled to
-  its own peak looks like a storm; the axis grows in fixed steps instead, so a
-  steady line stays steady.
-- **Gaps are drawn as gaps.** A metric that stops being reported breaks the line
-  rather than being interpolated across.
-- **Privileges are explained, not hidden.** macOS temperatures come from SMC,
-  which needs root. Hamon runs fine without it and says which sensors it could
-  not read, rather than showing an empty temperatures widget.
-
-## Requirements
-
-- Rust 1.90 or newer (the crate uses edition 2024)
-- Node 20 or newer
-- Tauri's platform prerequisites — see below
-
-## Building and running on macOS
+**Requirements:** Rust 1.90+, Node 20+, and [Tauri's platform prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```sh
 npm install
-npm run tauri dev
+npm run tauri dev      # run the app
+npm run tauri build    # build Hamon.app and a .dmg
 ```
 
-A first `cargo build` pulls in the WebKit and Objective-C bindings and takes a
-while; later builds are fast.
+Bundles are written to `src-tauri/target/release/bundle/`.
+The first Rust build is slow. Later builds are fast.
 
-To produce a distributable bundle:
+### macOS notes
 
-```sh
-npm run tauri build
-```
+- **Unsigned build.** On first launch, right-click the app and choose Open, or run:
+  ```sh
+  xattr -d com.apple.quarantine Hamon.app
+  ```
+- **Temperatures need root.** macOS only exposes them through the SMC. Hamon runs
+  without root and lists which sensors it couldn't read. To read them all:
+  ```sh
+  sudo ./src-tauri/target/release/hamon
+  ```
 
-This writes `Hamon.app` and a `.dmg` under
-`src-tauri/target/release/bundle/`.
+### Linux notes
 
-Templating runs through root, so to read SMC temperatures:
+Install WebKitGTK and its dependencies first.
 
-```sh
-sudo "$(pwd)/src-tauri/target/release/hamon"
-```
-
-## Running it on Linux
-
-Linux support is complete and ships in the same binary — the collectors read
-`/proc` and `/sys`, and the frontend is identical. It has not been exercised on
-a live machine as thoroughly as macOS, so treat the first run as a test.
-
-### Prerequisites
-
-Tauri v2 on Linux needs WebKitGTK and its dependencies. On NixOS:
-
-```nix
-pkgs.stdenv.mkDerivation {
-  pname = "hamon";
-  version = "0.1.0";
-
-  src = ./.;
-
-  nativeBuildInputs = with pkgs; [
-    cargo rustc nodejs_22 pkg-config
-    # For `npm run tauri build`:
-    makeWrapper patchelf
-  ];
-
-  buildInputs = with pkgs; [
-    webkitgtk_4_1
-    gtk3
-    libsoup_3
-    javascriptcoregtk-4.1
-    librsvg
-  ];
-
-  # Tauri must not be built inside an existing `$out`; the bundler writes into it.
-  dontConfigure = true;
-
-  installPhase = ''
-    runHook preInstall
-    npm ci --prefix .
-    npm run tauri build --prefix .
-    mkdir -p $out
-    cp -r src-tauri/target/release/bundle/* $out/
-    runHook postInstall
-  '';
-}
-```
-
-Or, interactively on a `nix-shell`:
-
+**NixOS** (`shell.nix`):
 ```nix
 { pkgs ? import <nixpkgs> { } }:
-
 pkgs.mkShell {
   packages = with pkgs; [
     cargo rustc nodejs_22 pkg-config
@@ -131,132 +60,79 @@ pkgs.mkShell {
 }
 ```
 
-Then, inside the shell:
-
+**Debian/Ubuntu:**
 ```sh
-npm install
-npm run tauri dev
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev \
+  libjavascriptcoregtk-4.1-dev librsvg2-dev build-essential curl file \
+  libssl-dev pkg-config
 ```
 
-On Debian and Ubuntu the equivalents are `libwebkit2gtk-4.1-dev`,
-`libgtk-3-dev`, `libsoup-3.0-dev`, `libjavascriptcoregtk-4.1-dev`,
-`librsvg2-dev`, plus `build-essential`, `curl`, `file`, `libssl-dev` and
-`pkg-config`.
+Then run `npm install && npm run tauri dev`.
 
-### What to check on Linux
+Where each reading comes from, and what to expect:
 
-- **Temperatures and fans** come from `/sys/class/hwmon`. `hwmon` is world
-  readable, but some chips (`coretemp`, `k10temp`, `zenpower`) restrict their
-  `temp*_input` files to root. Sensors that need it are listed with a lock icon
-  rather than omitted; run `sudo hamon` to read them all.
-- **GPU** metrics use NVML, `dlopen`ed at runtime. If `libnvidia-ml.so.1` is not
-  on the library path the GPU widget degrades to whatever else is available
-  rather than failing.
-- **Disks** are read from `/proc/diskstats`, so whole-disk and partition
-  entries both appear. Very large disks report in 512-byte sectors regardless of
-  their real block size; rates are computed from deltas, so they stay correct.
-- **Network** per-interface counters come from `/proc/net/dev`, with carrier and
-  MTU from `/sys/class/net` and IPv4 addresses from `getifaddrs`.
-- **Distro name** is read from `/etc/os-release`.
+| Data | Source | Note |
+| --- | --- | --- |
+| Temperatures, fans | `/sys/class/hwmon` | Some chips (`coretemp`, `k10temp`) need root. They show a lock icon. |
+| GPU | NVIDIA NVML, loaded at runtime | Without `libnvidia-ml.so.1`, the GPU widget shows what else is available. |
+| Disks | `/proc/diskstats` | Whole disks and partitions both appear. |
+| Network | `/proc/net/dev`, `/sys/class/net`, `getifaddrs` | |
+| Distro name | `/etc/os-release` | |
+
+One test, `finds_loopbacks_ipv4_address`, expects a `lo` interface and can't pass on macOS.
 
 ## Development
 
 ```sh
-npm run dev        # frontend only, in a browser, against synthetic data
-npm run tauri dev  # the real thing
+npm run dev            # frontend only, in a browser, with fake data
+npm run tauri dev      # full app
 ```
 
-`npm run dev` is not a mock UI. When the Tauri IPC is absent, `src/lib/tauri.ts`
-serves the same command surface from `src/lib/mock.ts`, which generates lively
-synthetic snapshots and keeps layout edits in `localStorage`. That makes the
-entire frontend — edit mode, drag-to-reorder, the configuration panel, every
-chart — developable and inspectable in a normal browser without a Rust rebuild.
+`npm run dev` works without Rust because `src/lib/mock.ts` stands in for the backend.
 
 ### Checks
 
 ```sh
-npm run check              # svelte-check, tsc, and both contract checks
-npm run check:catalog      # widget catalog parity
-npm run check:wire         # wire-format shape parity
+npm run check                    # types + both contract checks below
 cd src-tauri && cargo test
 cd src-tauri && cargo clippy --all-targets
 cd src-tauri && cargo fmt --check
 ```
 
-The two `check:` scripts exist because parts of the contract are declared
-twice, once per language, and cannot share a source. Both compare a
-hand-written frontend declaration against the real Rust definition, read by
-running one of the two examples in `src-tauri/examples/`:
+Some definitions exist in both Rust and TypeScript, so two scripts keep them in sync:
 
-- **`check:catalog`** — `catalog.ts` carries the labels and field schemas the UI
-  renders; `layout.rs` carries the kinds and default configs the backend hands
-  out. A kind in one file but not the other still builds and only shows up as a
-  widget that renders nothing.
-- **`check:wire`** — `types.ts` mirrors the Rust wire types by hand. Rename a
-  field in `model.rs` and TypeScript still typechecks, because it has no idea
-  the field moved; the widget then renders an em dash forever. This compares
-  every leaf path of a real serialised `Snapshot` against the synthetic one in
-  `mock.ts`, in both directions, so neither a missing field nor a field only the
-  frontend believes in can pass.
+- `check:catalog` compares the widget list in `catalog.ts` with `layout.rs`.
+- `check:wire` compares the data shape in `mock.ts` with the real Rust output.
 
-## How it fits together
+## How it works
+
+A sampler thread reads the hardware once per tick and pushes a full snapshot to the UI. The UI never polls.
 
 ```
 src-tauri/src/
-  lib.rs        plugin setup, sampler start
-  commands.rs   the IPC surface; AppState owns the sampler and the layout store
-  sample.rs     the sampler thread: interval, wake channel, emit callback
-  model.rs      the wire types, serialised once per tick
-  layout.rs     Layout/Widget, persistence, the catalog contract
-  collect/      one module per subsystem, platform-independent
-  platform/     the parts that must be per-OS: macOS FFI, Linux /proc and /sys
-src/lib/
-  tauri.ts      the only module that imports @tauri-apps; selects real or mock
-  state.svelte.ts  the Dashboard rune class: snapshot, layout, edit state, commands
-  catalog.ts    widget kinds, field schemas, defaults — the frontend contract
-  types.ts      hand-written mirrors of the Rust wire types
-  metrics.ts    metric id -> value
-  history.svelte.ts  reactive ring buffers for the charts
-  widgets/      one component per widget kind
+  collect/    what each number is (CPU, memory, disk, ...), written once
+  platform/   where each OS keeps it (macOS FFI, Linux /proc and /sys)
+  sample.rs   sampler thread
+  commands.rs UI-to-backend commands
+  model.rs    data types sent to the UI
+  layout.rs   saved layout and widget catalog
+src/
+  lib/tauri.ts   the only file that talks to Tauri (real or mock)
+  lib/widgets/   one component per widget
+  App.svelte     main window
 ```
 
-Three decisions shape most of the code:
+Design choices:
 
-**Push, not poll.** A sampler thread emits a whole `Snapshot` on
-`hamon://snapshot` once per tick. There is no polling anywhere in the UI, so a
-paused sampler and a stalled one are distinguishable — the UI shows a tick age.
+- **The backend owns the layout.** Every change returns the saved layout, so the UI can't drift out of sync.
+- **Charts grow in fixed steps.** An idle CPU graph doesn't look like a storm.
+- **Gaps stay gaps.** Missing data breaks the line instead of being drawn across.
 
-**Layout mutations round-trip.** Every mutating command returns the new layout,
-and the frontend replaces its state with it wholesale. The backend is therefore
-the only place layout invariants are enforced, and the frontend cannot drift out
-of sync with what was actually saved.
+## Your layout
 
-**Null is a value.** Every wire field is `snake_case` and `Option<T>` arrives as
-`null`, never absent. `responses_use_the_same_field_naming_as_the_snapshots` in
-`commands.rs` pins that convention, and `npm run check:wire` holds the whole
-struct shape against the Rust definitions.
-
-Metrics are resolved in the frontend, not the backend. A metric id like
-`cpu-usage` can span several devices, and which one to report depends on the
-metric: load and temperature take the worst device, power and memory are summed.
-Those rules live with the rest of `metrics.ts`.
-
-## Where your layout lives
-
-`layout.json` in Tauri's per-platform config directory:
+Saved as `layout.json`:
 
 - macOS: `~/Library/Application Support/com.hamon.app/layout.json`
 - Linux: `~/.config/com.hamon.app/layout.json`
 
-Delete it to start over. **Edit dashboard → Reset** restores the defaults without
-deleting the file.
-
-## Layout of the file
-
-```
-Layout { version, columns, sample_interval_ms, widgets: [ { kind, config } ] }
-```
-
-`kind` is one of the catalog kinds; `config` is kind-specific and every field has
-a default. Unknown kinds are preserved rather than dropped, so downgrading does
-not lose your dashboard, and the widget says so instead of rendering blank.
+To reset, use **Edit dashboard → Reset**, or delete the file.
