@@ -1,0 +1,18 @@
+<!--
+  Hamon's favicon.
+
+  The arc is the app's gauge at roughly 70% — the shape the dashboard leads with —
+  in the same accent as `--accent`. Drawn at 16px first: at that size the needle
+  and the tick marks turn to mush, so this is deliberately two elements and a
+  cut-off ring rather than a detailed gauge.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Hamon">
+  <rect width="32" height="32" rx="7" fill="#0c0e12" />
+  <g fill="none" stroke-linecap="round" stroke-width="3.4">
+    <!-- Track, the unfilled remainder of the arc. -->
+    <path d="M7 22.5A10 10 0 1 1 25 22.5" stroke="#232833" />
+    <!-- Sweep. -->
+    <path d="M7 22.5A10 10 0 0 1 20.7 8.1" stroke="#4c9aff" />
+  </g>
+  <circle cx="25" cy="22.5" r="2.1" fill="#4c9aff" />
+</svg>

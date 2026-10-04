@@ -1,0 +1,159 @@
+/*
+ * Hamon's global styles.
+ *
+ * A hardware monitor is a dark, dense, always-on window, so the palette is
+ * built around one accent and a neutral ramp rather than per-widget colours. A
+ * widget that needs to say "this is hot" says it with `--danger`; everything
+ * else is the accent or grey. That restraint is what lets a dashboard of eight
+ * cards read as one instrument instead of eight competing charts.
+ *
+ * Colours are declared as custom properties so light mode, if it is ever added,
+ * is one block rather than a sweep through every component. `--panel`,
+ * `--panel-sunken` and `--hover` exist so that "one step away from the page
+ * background" has a name and every component picks the same one.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Neutrals, darkest to lightest. */
+  --bg: #0c0e12;
+  --panel: #14171d;
+  --panel-sunken: #10131a;
+  --input: #0e1116;
+  --hover: #1c2029;
+  --track: #232833;
+  --border: #232833;
+  --border-strong: #333a49;
+
+  /* Text ramp. Four levels is enough: headings, body, secondary, disabled. */
+  --text: #e6e9ef;
+  --text-dim: #98a1b3;
+  --muted: #626b7d;
+
+  /* One accent, plus semantic colours used sparingly. */
+  --accent: #4c9aff;
+  --accent-dim: #2f5f9e;
+  --accent-soft: #16233a;
+  --up: #c084fc;
+  --warn: #f0b429;
+  --warn-dim: #8a6412;
+  --warn-soft: #2a2211;
+  --danger: #f4685f;
+  --danger-dim: #8f3630;
+  --danger-soft: #2c1717;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 14px rgb(0 0 0 / 0.18);
+
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+#app {
+  height: 100%;
+}
+
+/*
+ * A `container-type: inline-size` on the app root lets components size type
+ * against the *card* width rather than the viewport, which is what makes a
+ * gauge's number shrink sensibly when the grid is narrowed to one column.
+ * Every `cqw` unit in the components resolves against the nearest ancestor
+ * container.
+ */
+#app,
+.app {
+  container-type: inline-size;
+}
+
+/* The window keeps its native title bar, so the webview starts below it and
+   needs no inset padding. Both platforms get the same treatment. */
+
+/* Scrollbars: present but quiet. A monitor updates constantly and a bright
+   scrollbar would be the thing your eye catches. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: content-box;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Numerals must not jitter as they tick: tabular figures everywhere a value
+   changes in place, and a stable width for scroll-free tables. */
+input[type='number'] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Selection is barely visible against the dark panel, which is what you want in
+   a monitor you glance at, but the accent keeps it legible when copying text. */
+::selection {
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+/*
+ * Honour the OS "reduce motion" setting. The dashboard's own animations are all
+ * short easing transitions or one spinner; disabling them entirely leaves the
+ * numbers updating normally.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

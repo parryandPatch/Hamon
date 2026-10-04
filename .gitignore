@@ -1,0 +1,43 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Local environment overrides. Nothing here needs one today, but a `.env`
+# reaching a public repo is unrecoverable once it is pushed.
+.env
+.env.*
+!.env.example
+
+# Built bundles, in case they are ever produced outside target/.
+*.dmg
+*.app
+*.deb
+*.AppImage
+*.rpm
+
+# `tauri icon` also emits iOS and Android icon trees (35 files). Hamon is
+# desktop-only, so they are never bundled — regenerated on demand from the
+# source icon rather than committed.
+src-tauri/icons/ios/
+src-tauri/icons/android/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

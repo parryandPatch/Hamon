@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Hamon</title>
+    <style>
+      /*
+        Painted before the bundle parses, so a slow first paint shows the app's
+        own background rather than the browser's white flash. A hardware monitor
+        in a dark window flashing white on launch reads as a crash.
+      */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0c0e12;
+        color: #e6e9ef;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
